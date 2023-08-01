@@ -1,9 +1,11 @@
 // NODEJS SERVER API WITH ROUTES (OLD WAY)
+const { lookupService } = require('dns/promises');
 const fs = require('fs');
 const http = require('http');
 const url = require('url');
 
-// Fill out the cards.html template and replace the placeholders
+// Function to Fill out the corresponding template (cards.html,
+// product.html, etc) and replace the placeholders.
 // /g (Global) means it will replace all occurrences of the
 // placeholders and not just the first one.
 // We created a new "output" variable because its not a good practice to
@@ -48,21 +50,25 @@ const data = fs.readFileSync(`${__dirname}/dev-data/data.json`, 'utf-8');
 // Converts data (type string) into an array of objects
 const dataObj = JSON.parse(data);
 
-console.log(typeof data);
-console.log(typeof dataObj);
-
 // ********************************************************
 // CREATE SERVER
 // ********************************************************
 const server = http.createServer((req, res) => {
-  // pathName contains the current path in your browser
-  const pathName = req.url;
+  // REQ.URL contains the current path in your browser.
+  // URL.PARSE gives us access to REQ.URL properties, like
+  // query, pathname, etc.
+  // TRUE parses the query property into an object
+  console.log(url.parse(req.url, true));
+
+  // Create the query and pathname variables by Destructuring
+  // the REQ.URL object properties with the same name.
+  const { query, pathname } = url.parse(req.url, true);
 
   // ********************************************************
   // ROUTES
   // ********************************************************
   // OVERVIEW PAGE
-  if (pathName === '/' || pathName === '/overview') {
+  if (pathname === '/' || pathname === '/overview') {
     res.writeHead(200, {
       'Content-Type': 'text/html',
     });
@@ -81,15 +87,32 @@ const server = http.createServer((req, res) => {
     // Replace the PRODUCT_CARDS placeholder with the cardsHtml we created
     const newOutput = tempOverview.replace('{%PRODUCT_CARDS%}', cardsHtml);
 
+    // Send HTML to screen
     res.end(newOutput);
 
     // ********************************************************
     // PRODUCT PAGE
     // ********************************************************
-  } else if (pathName === '/product') {
-    res.end('This is the PRODUCT');
+  } else if (pathname === '/product') {
+    console.log(`QUERY:`, query);
 
+    res.writeHead(200, {
+      'Content-Type': 'text/html',
+    });
+
+    // dataObj[query.id] array element contains the product id we want
+    // id: '0'- Avocado, id: '1'- Cheese, etc
+    const product = dataObj[query.id];
+
+    // Call function to fill out placeholders for values
+    const newOutput = replaceTemplate(tempProduct, product);
+
+    // Send HTML to screen
+    res.end(newOutput);
+
+    // *************************************************
     // API
+    // *************************************************
   } else if (pathName === '/api') {
     res.writeHead(200, {
       'Content-Type': 'application/json',
